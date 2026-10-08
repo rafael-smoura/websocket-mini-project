@@ -1,6 +1,7 @@
 from flask import Flask, jsonify, request
 from repository.database import db
 from db_models.payement import Payment
+from payments.pix import Pix
 from datetime import datetime, timedelta, timezone
 from dotenv import load_dotenv
 from os import getenv
@@ -31,6 +32,8 @@ def create_payment_pix():
         qr_code=data.get('qr_code'),
         expiration_date=expiration_date
     )
+    pix_obj = Pix()
+    data_payment_pix = pix_obj.create_payment()
     db.session.add(new_payment)
     db.session.commit()
 
