@@ -1,11 +1,10 @@
-from flask import Flask, jsonify, request
-from repository.database import db
+from datetime import datetime, timedelta, timezone
+from os import getenv
+from dotenv import load_dotenv
+from flask import Flask, jsonify, request, send_file
 from db_models.payement import Payment
 from payments.pix import Pix
-from datetime import datetime, timedelta, timezone
-from dotenv import load_dotenv
-from os import getenv
-
+from repository.database import db
 
 load_dotenv('.env')
 DATABASE_URL = getenv('DATABASE_URL')
@@ -19,35 +18,47 @@ db.init_app(app)
 
 @app.route('/payments/pix', methods=['POST'])
 def create_payment_pix():
-    data = request.get_json()
+    data = request.get_json() or {}
 
-    if 'value' not in data:
+    if 'value' not in data or data['value'] is None:
         return jsonify({"error": "O valor do pagamento é obrigatório."}), 400
 
-    expiration_date = datetime.now(timezone.utc) + timedelta(minutes=30)
-    new_payment = Payment(
-        value=data['value'],
-        paid=data.get('paid', False),
-        bank_payment_id=data.get('bank_payment_id'),
-        qr_code=data.get('qr_code'),
-        expiration_date=expiration_date
-    )
+    # Gera os dados do Pix/QR Code no banco simulado/API externa
     pix_obj = Pix()
     data_payment_pix = pix_obj.create_payment()
+
+    # Define a expiração (30 min em UTC)
+    expiration_date = datetime.now(timezone.utc) + timedelta(minutes=30)
+
+    new_payment = Payment(
+        value=data['value'],
+        paid=False,
+        bank_payment_id=data_payment_pix['bank_payment_id'],
+        qr_code=data_payment_pix['qr_code_path'],
+        expiration_date=expiration_date
+    )
+
     db.session.add(new_payment)
     db.session.commit()
 
-    return jsonify({"message": "O pagamento foi criado!", "payment": new_payment.to_dict()}), 201
+    return jsonify({
+        "message": "O pagamento foi criado!",
+        "payment": new_payment.to_dict()
+    }), 201
 
 @app.route('/payments/pix/confirmation', methods=['POST'])
 def pix_confirmation():
     return jsonify({"message": "O pagamento foi confirmado!"})
 
-@app.route('/payments/pix/<int:payment_id>', methods = ['GET'])
+@app.route('/payments/pix/qr_code/<file_name>',methods=['GET'])
+def get_image(file_name):
+    return send_file(f"static/img/{file_name}.png", mimetype='image/png')
+
+@app.route('/payments/pix/<int:payment_id>', methods=['GET'])
 def payment_pix_page(payment_id):
     return 'pagamento pix'
 
+
+
 if __name__ == "__main__":
     app.run(debug=True, port=5000)
-
-
