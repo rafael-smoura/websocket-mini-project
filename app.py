@@ -1,7 +1,7 @@
 from datetime import datetime, timedelta, timezone
 from os import getenv
 from dotenv import load_dotenv
-from flask import Flask, jsonify, request, send_file
+from flask import Flask, jsonify, request, send_file, render_template
 from db_models.payement import Payment
 from payments.pix import Pix
 from repository.database import db
@@ -56,8 +56,13 @@ def get_image(file_name):
 
 @app.route('/payments/pix/<int:payment_id>', methods=['GET'])
 def payment_pix_page(payment_id):
-    return 'pagamento pix'
-
+    payment = Payment.query.get(payment_id)  # Apenas para verificar se o pagamento existe
+   
+    return render_template('payment.html', 
+                           payment_id=payment_id, 
+                           value=payment.value, 
+                           host="http://localhost:5000", 
+                           qr_code = payment.qr_code)
 
 
 if __name__ == "__main__":
