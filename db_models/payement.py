@@ -8,3 +8,13 @@ class Payment(db.Model):
     qr_code = db.Column(db.String(100), nullable=True)
     expiration_date = db.Column(db.DateTime, nullable=True)
 
+    def to_dict(self):
+        return {
+            "id": self.id,
+            "value": self.value,
+            "paid": self.paid,
+            "bank_payment_id": self.bank_payment_id,
+            "qr_code": self.qr_code,
+            "expiration_date": self.expiration_date.isoformat() if self.expiration_date else None
+            
+        }
