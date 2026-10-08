@@ -1,5 +1,6 @@
 from flask import Flask, jsonify, request
 from repository.database import db
+from db_models.payement import Payment
 from dotenv import load_dotenv
 from os import getenv
 
