@@ -2,6 +2,7 @@ from datetime import datetime, timedelta, timezone
 from os import getenv
 from dotenv import load_dotenv
 from flask import Flask, jsonify, request, send_file, render_template
+from flask_socketio import SocketIO
 from db_models.payement import Payment
 from payments.pix import Pix
 from repository.database import db
@@ -9,12 +10,14 @@ from repository.database import db
 load_dotenv('.env')
 DATABASE_URL = getenv('DATABASE_URL')
 SECRET_KEY = getenv('SECRET_KEY')
+ALLOWED_ORIGINS = getenv('ALLOWED_ORIGINS').split(',')
 
 app = Flask(__name__)
 app.config['SQLALCHEMY_DATABASE_URI'] = DATABASE_URL
 app.config['SECRET_KEY'] = SECRET_KEY
 
 db.init_app(app)
+socketio = SocketIO(app, cors_allowed_origins=ALLOWED_ORIGINS)  # Restringe as rotas que podem ter acesso ao servidor
 
 @app.route('/payments/pix', methods=['POST'])
 def create_payment_pix():
@@ -56,7 +59,7 @@ def get_image(file_name):
 
 @app.route('/payments/pix/<int:payment_id>', methods=['GET'])
 def payment_pix_page(payment_id):
-    payment = Payment.query.get(payment_id)  # Apenas para verificar se o pagamento existe
+    payment = db.session.get(Payment, payment_id)  # Apenas para verificar se o pagamento existe
 
     if not payment:
         return render_template('404.html'), 404
@@ -66,6 +69,11 @@ def payment_pix_page(payment_id):
                            host="http://localhost:5000", 
                            qr_code = payment.qr_code)
 
+# websockets
+@socketio.on('connect') # espera evento 
+def hand_shake():
+    print('Client connected to the server')
 
 if __name__ == "__main__":
-    app.run(debug=True, port=5000)
+    socketio.run(app, debug=True, port=5000) # Sockets implementado
+   
