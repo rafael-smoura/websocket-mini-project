@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="pt-br">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
@@ -11,23 +11,20 @@
       rel="stylesheet"
     />
 
-    <link rel="stylesheet" href="styles.css" />
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}" />
 
-    <title>Pagamento</title>
+    <title>Pagamento Confirmado</title>
   </head>
   <body>
     <main>
       <header>
         <div id="qr-code">
-          <img src="./img/qrcode.png" alt="QR Code" />
-
-
+          <img src="{{ url_for('get_image', file_name=qr_code) }}" alt="QR Code" />
           <img
             id="confirmed-icon"
-            src="./img/check.svg"
+            src="{{ url_for('static', filename='template_img/check.svg') }}"
             alt="Ícone de pagamento confirmado"
           />
-          
         </div>
 
         <aside>
@@ -37,24 +34,23 @@
           </p>
 
           <div id="purchase-value">
-            <img src="./img/tag.svg" alt="Ícone de tag" />
-            <span>Compra de R$ <strong id="amount">287,90</strong></span>
+            <img src="{{ url_for('static', filename='template_img/tag.svg') }}" alt="Ícone de tag" />
+            <span>Compra de R$ <strong id="amount">{{ value }}</strong></span>
           </div>
         </aside>
       </header>
 
       <footer>
         <div id="expiration-time">
-          <img src="./img/currency.svg" alt="Ícone moeda" />
+          <img src="{{ url_for('static', filename='template_img/currency.svg') }}" alt="Ícone moeda" />
           <span>Recebemos a confirmação do pagamento do seu pedido via pix!</span>
         </div>
-
 
         <div id="order">
           <small>O número do seu pedido é</small>
           <div>
-            <img src="./img/basket.svg" alt="Ícone do pedido" />
-            <span>527485022</span>
+            <img src="{{ url_for('static', filename='template_img/basket.svg') }}" alt="Ícone do pedido" />
+            <span>{{ payment_id }}</span>
           </div>
         </div>
       </footer>

@@ -17,7 +17,7 @@ app.config['SQLALCHEMY_DATABASE_URI'] = DATABASE_URL
 app.config['SECRET_KEY'] = SECRET_KEY
 
 db.init_app(app)
-socketio = SocketIO(app, cors_allowed_origins=ALLOWED_ORIGINS)  # Restringe as rotas que podem ter acesso ao servidor
+socketio = SocketIO(app, cors_allowed_origins=ALLOWED_ORIGINS)
 
 @app.route('/payments/pix', methods=['POST'])
 def create_payment_pix():
@@ -26,11 +26,9 @@ def create_payment_pix():
     if 'value' not in data or data['value'] is None:
         return jsonify({"error": "O valor do pagamento é obrigatório."}), 400
 
-    # Gera os dados do Pix/QR Code no banco simulado/API externa
     pix_obj = Pix()
     data_payment_pix = pix_obj.create_payment()
 
-    # Define a expiração (30 min em UTC)
     expiration_date = datetime.now(timezone.utc) + timedelta(minutes=30)
 
     new_payment = Payment(
@@ -53,48 +51,55 @@ def create_payment_pix():
 def pix_confirmation():
     data = request.get_json() or {}
 
-    # validations
-    if "bank_payment_id" not in data and "value" not in data:
+    # Usando 'or' para garantir que ambos os campos sejam obrigatórios
+    if "bank_payment_id" not in data or "value" not in data:
         return jsonify({"error": "Invalid payment data"}), 400
 
-    # payment confirmation
     payment = Payment.query.filter_by(bank_payment_id=data.get('bank_payment_id')).first()
 
     if not payment:
-        return render_template('404.html'), 404
+        return jsonify({"error": "Payment not found"}), 404
     
-    elif payment.paid:
-        return jsonify({"error": "Invalid payment"}), 400
+    if payment.paid:
+        return jsonify({"error": "Payment already confirmed"}), 400
 
     if data.get("value") != payment.value:
         return jsonify({"error": "Invalid payment value"}), 400
 
     payment.paid = True
     db.session.commit()
+    
+    socketio.emit('payment_confirmed', {'payment_id': payment.id, 'value': payment.value})
+    return jsonify({"message": "Operation successfully"}), 200
 
-    return render_template('confirmed_payment.html')
-
-@app.route('/payments/pix/qr_code/<file_name>',methods=['GET'])
+@app.route('/payments/pix/qr_code/<file_name>', methods=['GET'])
 def get_image(file_name):
     return send_file(f"static/img/{file_name}.png", mimetype='image/png')
 
 @app.route('/payments/pix/<int:payment_id>', methods=['GET'])
 def payment_pix_page(payment_id):
-    payment = db.session.get(Payment, payment_id)  # Apenas para verificar se o pagamento existe
+    payment = db.session.get(Payment, payment_id)
 
     if not payment:
         return render_template('404.html'), 404
+
+
+    if payment.paid:
+        return render_template('confirmed_payment.html',
+                                   payment_id=payment_id, 
+                                   value=payment.value, 
+                                   host="http://localhost:5000", 
+                                   qr_code=payment.qr_code)
+
     return render_template('payment.html', 
                            payment_id=payment_id, 
                            value=payment.value, 
                            host="http://localhost:5000", 
-                           qr_code = payment.qr_code)
+                           qr_code=payment.qr_code)
 
-# websockets
-@socketio.on('connect') # espera evento 
+@socketio.on('connect') 
 def hand_shake():
     print('Client connected to the server')
 
 if __name__ == "__main__":
-    socketio.run(app, debug=True, port=5000) # Sockets implementado
-   
+    socketio.run(app, debug=True, port=5000)
