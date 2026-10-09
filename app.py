@@ -57,7 +57,9 @@ def get_image(file_name):
 @app.route('/payments/pix/<int:payment_id>', methods=['GET'])
 def payment_pix_page(payment_id):
     payment = Payment.query.get(payment_id)  # Apenas para verificar se o pagamento existe
-   
+
+    if not payment:
+        return render_template('404.html'), 404
     return render_template('payment.html', 
                            payment_id=payment_id, 
                            value=payment.value, 
